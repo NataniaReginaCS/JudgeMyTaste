@@ -9,4 +9,5 @@ public class JudgeMyTasteContext : DbContext
         : base(options) { }
 
     public DbSet<FavoriteBand> FavoriteBands => Set<FavoriteBand>();
+    public DbSet<Musik> Musik => Set<Musik>();
 }

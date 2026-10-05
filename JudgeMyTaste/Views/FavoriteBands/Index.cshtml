@@ -1,0 +1,87 @@
+@model IEnumerable<JudgeMyTaste.Models.FavoriteBand>
+
+@{
+    ViewData["Title"] = "Favorite Bands";
+    var importErrors = TempData["ImportErrors"] as string;
+    var importSuccess = TempData["ImportSuccess"] as string;
+}
+
+<h1>Favorite Bands</h1>
+
+@if (!string.IsNullOrEmpty(importSuccess))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @importSuccess
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+    <a asp-action="Create" class="btn btn-primary">Tambah Band</a>
+    <a asp-action="Export" class="btn btn-success">Export to Excel</a>
+
+    <form asp-action="Import" method="post" enctype="multipart/form-data" class="d-flex gap-2 ms-auto">
+        <input type="file" name="file" accept=".xlsx" class="form-control" required />
+        <button type="submit" class="btn btn-outline-primary">Import</button>
+    </form>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(m => m.Name)</th>
+            <th>@Html.DisplayNameFor(m => m.Genre)</th>
+            <th>@Html.DisplayNameFor(m => m.Reason)</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Name</td>
+                <td>@item.Genre</td>
+                <td>@item.Reason</td>
+                <td>
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Hapus</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@* Error popup (shown automatically when the import fails) *@
+<div class="modal fade" id="importErrorModal" tabindex="-1" aria-labelledby="importErrorTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger" id="importErrorTitle">Import failed</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(importErrors))
+                {
+                    <ul class="mb-0">
+                        @foreach (var line in importErrors.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            <li>@line</li>
+                        }
+                    </ul>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @if (!string.IsNullOrEmpty(importErrors))
+    {
+        <script>
+            new bootstrap.Modal(document.getElementById('importErrorModal')).show();
+        </script>
+    }
+}

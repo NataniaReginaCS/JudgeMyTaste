@@ -1,0 +1,21 @@
+@if (User.Identity?.IsAuthenticated == true)
+{
+    var displayName = User.FindFirst("FullName")?.Value ?? User.Identity!.Name;
+
+    <form asp-controller="Account" asp-action="Logout" method="post"
+          class="d-flex align-items-center gap-2 ms-lg-3 mb-0">
+        <span class="navbar-text">Halo, @displayName</span>
+        @if (User.IsInRole("Admin"))
+        {
+            <span class="badge text-bg-secondary">Admin</span>
+        }
+        <button type="submit" class="btn btn-sm btn-outline-secondary">Logout</button>
+    </form>
+}
+else
+{
+    <div class="d-flex gap-2 ms-lg-3">
+        <a asp-controller="Account" asp-action="Login" class="btn btn-sm btn-outline-primary">Login</a>
+        <a asp-controller="Account" asp-action="Register" class="btn btn-sm btn-primary">Daftar</a>
+    </div>
+}

@@ -46,6 +46,28 @@ namespace JudgeMyTaste.Migrations
 
                     b.ToTable("FavoriteBands");
                 });
+
+            modelBuilder.Entity("JudgeMyTaste.Models.Musik", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Genre")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Musik");
+                });
 #pragma warning restore 612, 618
         }
     }

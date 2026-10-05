@@ -1,0 +1,200 @@
+@{
+    ViewData["Title"] = "Kelola Musik";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="h2 mb-1">Kelola Musik</h1>
+        <p class="text-muted mb-0">
+            Halaman ini memanggil API <code>/api/musik</code> lewat jQuery AJAX (GET, POST, PUT, DELETE).
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">Import / Export</a>
+        <button id="btnAdd" type="button" class="btn btn-primary">Tambah lagu</button>
+    </div>
+</div>
+
+<div id="pageAlert" class="alert d-none" role="alert"></div>
+
+<div class="card shadow-sm mb-3">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="width:5rem">Id</th>
+                    <th>Judul Lagu</th>
+                    <th>Genre</th>
+                    <th style="width:11rem"></th>
+                </tr>
+            </thead>
+            <tbody id="musikBody">
+                <tr><td colspan="4" class="text-center text-muted py-4">Memuat data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header fw-semibold">Log request API</div>
+    <pre id="apiLog" class="mb-0 p-3 small" style="max-height:180px; overflow:auto;">Belum ada request.</pre>
+</div>
+
+@* Form tambah / edit *@
+<div class="modal fade" id="musikModal" tabindex="-1" aria-labelledby="musikModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="musikForm" class="modal-content" novalidate>
+            <div class="modal-header">
+                <h5 class="modal-title" id="musikModalTitle">Tambah lagu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <ul id="formErrors" class="text-danger small d-none"></ul>
+                <input type="hidden" id="fId" />
+                <div class="mb-3">
+                    <label for="fName" class="form-label">Judul Lagu</label>
+                    <input id="fName" class="form-control" maxlength="100" />
+                </div>
+                <div class="mb-3">
+                    <label for="fGenre" class="form-label">Genre</label>
+                    <input id="fGenre" class="form-control" maxlength="50" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button id="btnSave" type="submit" class="btn btn-primary">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            var apiUrl = '/api/musik';
+            var modal = new bootstrap.Modal(document.getElementById('musikModal'));
+
+            // Catat setiap request ke API supaya kelihatan apa yang di-hit.
+            function log(text) {
+                var $log = $('#apiLog');
+                var old = $log.text() === 'Belum ada request.' ? '' : $log.text();
+                $log.text(new Date().toLocaleTimeString() + '  ' + text + '\n' + old);
+            }
+
+            // Satu pintu untuk semua panggilan API.
+            function callApi(method, url, body) {
+                var req = $.ajax({
+                    url: url,
+                    method: method,
+                    contentType: body ? 'application/json' : undefined,
+                    data: body ? JSON.stringify(body) : undefined
+                });
+                req.done(function (data, textStatus, xhr) {
+                    log(method + ' ' + url + '  ->  ' + xhr.status);
+                }).fail(function (xhr) {
+                    log(method + ' ' + url + '  ->  ' + xhr.status + ' ' + xhr.statusText);
+                });
+                return req;
+            }
+
+            function showAlert(type, text) {
+                $('#pageAlert').attr('class', 'alert alert-' + type).text(text);
+            }
+
+            // READ: tampilkan data. Pakai .text() supaya isi data tidak dianggap HTML (aman dari XSS).
+            function render(items) {
+                var $body = $('#musikBody').empty();
+                if (!items.length) {
+                    $body.append($('<tr>').append(
+                        $('<td colspan="4" class="text-center text-muted py-4">').text('Belum ada data.')));
+                    return;
+                }
+                $.each(items, function (_, m) {
+                    var $tr = $('<tr>').data('item', m);
+                    $tr.append($('<td>').text(m.id));
+                    $tr.append($('<td>').text(m.name));
+                    $tr.append($('<td>').text(m.genre || ''));
+                    var $actions = $('<td class="text-end">');
+                    $actions.append($('<button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit">').text('Edit'));
+                    $actions.append($('<button type="button" class="btn btn-sm btn-outline-danger btn-delete">').text('Hapus'));
+                    $tr.append($actions);
+                    $body.append($tr);
+                });
+            }
+
+            function load() {
+                callApi('GET', apiUrl)
+                    .done(render)
+                    .fail(function () { showAlert('danger', 'Gagal memuat data dari API.'); });
+            }
+
+            function openForm(item) {
+                $('#formErrors').addClass('d-none').empty();
+                $('#fId').val(item ? item.id : '');
+                $('#fName').val(item ? item.name : '');
+                $('#fGenre').val(item ? (item.genre || '') : '');
+                $('#musikModalTitle').text(item ? 'Edit lagu' : 'Tambah lagu');
+                modal.show();
+            }
+
+            function showFormErrors(xhr) {
+                var messages = [];
+                var res = xhr.responseJSON;
+                if (res && res.errors) {
+                    $.each(res.errors, function (_, arr) {
+                        $.each(arr, function (_, msg) { messages.push(msg); });
+                    });
+                } else if (xhr.status === 404) {
+                    messages.push('Data tidak ditemukan (mungkin sudah dihapus).');
+                } else {
+                    messages.push('Terjadi kesalahan pada server (' + xhr.status + ').');
+                }
+                var $list = $('#formErrors').empty().removeClass('d-none');
+                $.each(messages, function (_, msg) { $list.append($('<li>').text(msg)); });
+            }
+
+            $('#btnAdd').on('click', function () { openForm(null); });
+
+            $('#musikBody').on('click', '.btn-edit', function () {
+                openForm($(this).closest('tr').data('item'));
+            });
+
+            // CREATE (POST) atau UPDATE (PUT)
+            $('#musikForm').on('submit', function (e) {
+                e.preventDefault();
+                var id = $('#fId').val();
+                var body = {
+                    name: $('#fName').val().trim(),
+                    genre: $('#fGenre').val().trim() || null
+                };
+                var req = id ? callApi('PUT', apiUrl + '/' + id, body) : callApi('POST', apiUrl, body);
+
+                $('#btnSave').prop('disabled', true);
+                req.done(function () {
+                    modal.hide();
+                    showAlert('success', id ? 'Data berhasil diubah.' : 'Data berhasil ditambahkan.');
+                    load();
+                }).fail(function (xhr) {
+                    showFormErrors(xhr);
+                }).always(function () {
+                    $('#btnSave').prop('disabled', false);
+                });
+            });
+
+            // DELETE
+            $('#musikBody').on('click', '.btn-delete', function () {
+                var m = $(this).closest('tr').data('item');
+                if (!confirm('Hapus lagu "' + m.name + '"?')) return;
+
+                callApi('DELETE', apiUrl + '/' + m.id)
+                    .done(function () { showAlert('success', 'Data berhasil dihapus.'); })
+                    .fail(function (xhr) {
+                        showAlert('danger', xhr.status === 404 ? 'Data sudah tidak ada.' : 'Gagal menghapus data.');
+                    })
+                    .always(load);
+            });
+
+            load();
+        });
+    </script>
+}
